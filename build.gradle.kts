@@ -14,6 +14,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC2")
 }
 
 tasks.test {
@@ -26,4 +27,10 @@ tasks.withType<KotlinCompile> {
 
 application {
     mainClass.set("MainKt")
+}
+
+
+tasks.register<Copy>("copyReport") {
+    from(layout.buildDirectory.dir("resources/apple.png"))
+    into(layout.buildDirectory.dir("toArchive"))
 }
