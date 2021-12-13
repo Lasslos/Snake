@@ -31,12 +31,14 @@ object MyFrame : JPanel() {
 
     init {
         frame.defaultCloseOperation = EXIT_ON_CLOSE
-        frame.size = windowSize
-        frame.add(MyFrame)
-        frame.setLocationRelativeTo(null)
         frame.isResizable = false
-        frame.isVisible = true
+
+        frame.add(MyFrame)
         frame.addKeyListener(game)
+
+        frame.pack()
+        frame.setLocationRelativeTo(null)
+        frame.isVisible = true
 
         background = Color.DARK_GRAY
         game.run()
@@ -68,6 +70,8 @@ object MyFrame : JPanel() {
         for (y in 0..fieldDimension.height) {
             g.drawLine(0, y * height, windowSize.width, y * height)
         }
+
+        repaint()
     }
 }
 
@@ -84,10 +88,7 @@ class Game(private val parentFrame: MyFrame): KeyListener {
         CoroutineScope(Dispatchers.Default).launch {
             while (!gameOver) {
                 delay(250)
-                launch {
-                    next()
-                    MyFrame.repaint()
-                }
+                next()
             }
         }
     }
@@ -102,7 +103,7 @@ class Game(private val parentFrame: MyFrame): KeyListener {
 
             when(JOptionPane.showOptionDialog(
                 parentFrame,
-                "Game Over",
+                "Game Over - Score: ${snakeFields.size}",
                 "Game Over",
                 JOptionPane.YES_OPTION,
                 JOptionPane.WARNING_MESSAGE,
@@ -150,8 +151,7 @@ class Game(private val parentFrame: MyFrame): KeyListener {
 }
 
 class Point(val x: Int, val y: Int) {
-    private fun copyWith(x: Int = this.x, y: Int = this.y) = Point(x, y)
-    operator fun plus(other: Point) = this.copyWith(this.x + other.x, this.y + other.y)
+    operator fun plus(other: Point) = Point(this.x + other.x, this.y + other.y)
     override fun equals(other: Any?): Boolean {
         if (other !is Point) return false
         return x == other.x && y == other.y

@@ -34,3 +34,9 @@ tasks.register<Copy>("copyReport") {
     from(layout.buildDirectory.dir("resources/apple.png"))
     into(layout.buildDirectory.dir("toArchive"))
 }
+
+val jar by tasks.getting(Jar::class) {
+    manifest {
+        attributes["Main-Class"] = "MainKt"
+    }
+}
