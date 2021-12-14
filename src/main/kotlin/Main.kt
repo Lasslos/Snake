@@ -10,7 +10,6 @@ fun main() {
     val game = Game()
     canvas.onStart(game)
     run(game)
-
 }
 
 interface AbstractCanvas {
@@ -81,6 +80,7 @@ class Game {
             appleField = Vector(Random.nextInt(0, canvas.fieldDimension.width - 1),
                 Random.nextInt(0, canvas.fieldDimension.height - 1))
         }
+        canvas.update()
     }
 }
 

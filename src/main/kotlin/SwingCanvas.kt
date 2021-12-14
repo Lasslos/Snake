@@ -18,6 +18,26 @@ object SwingCanvas : JPanel(), AbstractCanvas {
     private val frame = JFrame()
     private lateinit var game: Game
 
+    init {
+        frame.defaultCloseOperation = EXIT_ON_CLOSE
+        frame.isResizable = false
+
+        frame.add(this)
+        frame.addKeyListener(object : KeyListener {
+            override fun keyTyped(e: KeyEvent) {
+                game.keyPressed(e.keyChar)
+            }
+            override fun keyPressed(e: KeyEvent) {}
+            override fun keyReleased(e: KeyEvent) {}
+        })
+
+        frame.pack()
+        frame.setLocationRelativeTo(null)
+        frame.isVisible = true
+
+        background = Color.DARK_GRAY
+    }
+
     override fun onStart(game: Game) {
         this.game = game
     }
@@ -42,27 +62,7 @@ object SwingCanvas : JPanel(), AbstractCanvas {
     }
 
     override fun update() {
-
-    }
-
-    init {
-        frame.defaultCloseOperation = EXIT_ON_CLOSE
-        frame.isResizable = false
-
-        frame.add(this)
-        frame.addKeyListener(object : KeyListener {
-            override fun keyTyped(e: KeyEvent) {
-                game.keyPressed(e.keyChar)
-            }
-            override fun keyPressed(e: KeyEvent) {}
-            override fun keyReleased(e: KeyEvent) {}
-        })
-
-        frame.pack()
-        frame.setLocationRelativeTo(null)
-        frame.isVisible = true
-
-        background = Color.DARK_GRAY
+        repaint()
     }
 
     override fun paintComponent(g: Graphics) {
