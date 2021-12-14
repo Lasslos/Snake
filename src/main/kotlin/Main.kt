@@ -2,94 +2,64 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.Color
-import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.Image
-import java.awt.event.KeyEvent
-import java.awt.event.KeyListener
-import javax.imageio.ImageIO
-import javax.swing.JFrame
-import javax.swing.JOptionPane
-import javax.swing.JPanel
-import javax.swing.WindowConstants.EXIT_ON_CLOSE
 import kotlin.random.Random
-import kotlin.system.exitProcess
 
-val windowSize = Dimension(500, 500)
-val fieldDimension = Dimension(20, 20)
+const val delay = 150L
 
 fun main() {
-    MyFrame
+    val game = Game()
+    canvas.onStart(game)
+    run(game)
+
 }
 
-object MyFrame : JPanel() {
-    override fun getPreferredSize(): Dimension = windowSize
+interface AbstractCanvas {
+    val windowSize: Dimension
+    val fieldDimension: Dimension
 
-    val frame = JFrame()
-    var game = Game(this)
+    fun onStart(game: Game)
+    fun onRestart(game: Game)
+    fun onGameEnd()
 
-    init {
-        frame.defaultCloseOperation = EXIT_ON_CLOSE
-        frame.isResizable = false
-
-        frame.add(MyFrame)
-        frame.addKeyListener(game)
-
-        frame.pack()
-        frame.setLocationRelativeTo(null)
-        frame.isVisible = true
-
-        background = Color.DARK_GRAY
-        game.run()
-    }
-
-    override fun paintComponent(g: Graphics) {
-        super.paintComponent(g)
-        val width = windowSize.width / fieldDimension.width
-        val height = windowSize.height / fieldDimension.height
-        for (x in 0 until fieldDimension.width) {
-            for (y in 0 until fieldDimension.height) {
-                g.color = when {
-                    game.snakeFields.last() == Point(x, y) -> Color.GREEN
-                    game.snakeFields.contains(Point(x, y)) -> Color.BLUE
-                    else -> Color.DARK_GRAY
-                }
-                g.fillRect(x * width, y * height, width, height)
-            }
-        }
-
-        val myImage: Image = ImageIO.read(javaClass.getResource("apple.png"))
-            .getScaledInstance(width, height, Image.SCALE_SMOOTH)
-        g.drawImage(myImage, game.appleField.x * width, game.appleField.y * height, width, height, null)
-
-        g.color = Color.BLACK
-        for (x in 0..fieldDimension.width) {
-            g.drawLine(x * width, 0, x * width, windowSize.height)
-        }
-        for (y in 0..fieldDimension.height) {
-            g.drawLine(0, y * height, windowSize.width, y * height)
-        }
-
-        repaint()
-    }
+    fun update()
 }
 
-class Game(private val parentFrame: MyFrame): KeyListener {
-    //First element is end of snake, Last element is head
-    val snakeFields = MutableList(4) { Point(fieldDimension.width / 2, it) }
-    var appleField = Point(18, 4)
-    private var gameOver = false
+val canvas: AbstractCanvas = SwingCanvas //TODO
 
-    private var currentDirection = Point(0, +1)
-    private var nextDirection = Point(0, +1)
+private fun run(game: Game) {
+    CoroutineScope(Dispatchers.Default).launch {
+        while (!game.gameOver) {
+            delay(delay)
+            game.next()
+        }
+        canvas.onGameEnd()
+    }
+}
+fun restartGame() {
+    val game = Game()
+    canvas.onRestart(game)
+    run(game)
+}
 
-    fun run() {
-        CoroutineScope(Dispatchers.Default).launch {
-            while (!gameOver) {
-                delay(250)
-                next()
-            }
+class Game {
+    val snakeFields = MutableList(4) { Vector(canvas.fieldDimension.width / 2, it) }
+    var appleField = Vector(18, 4)
+    var gameOver = false
+
+    private var currentDirection = Vector(0, +1)
+    private var nextDirection = Vector(0, +1)
+
+    fun keyPressed(char: Char) {
+        val newDirection = when (char) {
+            'w' -> Vector(0, -1)
+            'a' -> Vector(-1, 0)
+            's' -> Vector(0, 1)
+            'd' -> Vector(1, 0)
+            else -> { return; }
+        }
+        //Check if Direction is Opposite to prevent an 180° turn
+        if (currentDirection + newDirection != Vector(0, 0)) {
+            nextDirection = newDirection
         }
     }
 
@@ -97,28 +67,9 @@ class Game(private val parentFrame: MyFrame): KeyListener {
         currentDirection = nextDirection
         val nextHeadPoint = snakeFields.last() + currentDirection
         if (nextHeadPoint.x < 0 || nextHeadPoint.y < 0 ||
-            nextHeadPoint.x >= fieldDimension.width || nextHeadPoint.y >= fieldDimension.height ||
-                snakeFields.contains(nextHeadPoint)) {
+            nextHeadPoint.x >= canvas.fieldDimension.width || nextHeadPoint.y >= canvas.fieldDimension.height ||
+            snakeFields.contains(nextHeadPoint)) {
             gameOver = true
-
-            when(JOptionPane.showOptionDialog(
-                parentFrame,
-                "Game Over - Score: ${snakeFields.size}",
-                "Game Over",
-                JOptionPane.YES_OPTION,
-                JOptionPane.WARNING_MESSAGE,
-                null,
-                arrayOf("Restart"),
-                null)) {
-                0 -> {
-                    parentFrame.game = Game(parentFrame)
-                    parentFrame.frame.removeKeyListener(this)
-                    parentFrame.frame.addKeyListener(parentFrame.game)
-                    parentFrame.game.run()
-                }
-                else -> exitProcess(0)
-            }
-
             return
         }
 
@@ -127,33 +78,16 @@ class Game(private val parentFrame: MyFrame): KeyListener {
         if (nextHeadPoint != appleField) {
             snakeFields.removeFirst()
         } else {
-            appleField = Point(Random.nextInt(0, fieldDimension.width - 1),
-                Random.nextInt(0, fieldDimension.height - 1))
-        }
-    }
-
-    override fun keyTyped(e: KeyEvent?) {}
-    override fun keyReleased(e: KeyEvent?) {}
-
-    override fun keyPressed(e: KeyEvent) {
-        val newDirection = when (e.keyChar) {
-            'w' -> Point(0, -1)
-            'a' -> Point(-1, 0)
-            's' -> Point(0, 1)
-            'd' -> Point(1, 0)
-            else -> { return; }
-        }
-        //Check if Direction is Opposite to prevent an 180° turn
-        if (currentDirection + newDirection != Point(0, 0)) {
-            nextDirection = newDirection
+            appleField = Vector(Random.nextInt(0, canvas.fieldDimension.width - 1),
+                Random.nextInt(0, canvas.fieldDimension.height - 1))
         }
     }
 }
 
-class Point(val x: Int, val y: Int) {
-    operator fun plus(other: Point) = Point(this.x + other.x, this.y + other.y)
+class Vector(val x: Int, val y: Int) {
+    operator fun plus(other: Vector) = Vector(this.x + other.x, this.y + other.y)
     override fun equals(other: Any?): Boolean {
-        if (other !is Point) return false
+        if (other !is Vector) return false
         return x == other.x && y == other.y
     }
 
@@ -163,3 +97,4 @@ class Point(val x: Int, val y: Int) {
         return result
     }
 }
+class Dimension(val width: Int, val height: Int)
